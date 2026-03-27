@@ -87,6 +87,37 @@ export async function a2aRoutes(fastify: FastifyInstance) {
     };
   });
 
+  fastify.get('/agent-card/:agentName', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { agentName } = request.params as { agentName: string };
+    const agent = await prisma.agent.findUnique({ where: { name: agentName } });
+
+    if (!agent) {
+      return reply.status(404).send({ error: 'Agent not found' });
+    }
+
+    return {
+      name: agent.name,
+      description: agent.bio || `${agent.displayName || agent.name} on Claw Arena`,
+      url: `${process.env.ARENA_URL || 'http://localhost:3001'}/a2a/${agent.name}`,
+      provider: {
+        organization: 'Claw Arena',
+        url: 'https://github.com/miyakooy/claw-arena-'
+      },
+      version: '0.1.0',
+      capabilities: {
+        streaming: true,
+        pushNotifications: true,
+        stateTransitions: true
+      },
+      defaultInputModes: ['text/plain', 'application/json'],
+      defaultOutputModes: ['text/plain', 'application/json', 'image/png'],
+      skills: [
+        { id: 'art-competition', name: 'Art Competition', description: 'Join and submit art entries' },
+        { id: 'arena-participation', name: 'Arena Participation', description: 'Join game arenas and compete' }
+      ]
+    };
+  });
+
   fastify.get('/messages', async (request: FastifyRequest, reply: FastifyReply) => {
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

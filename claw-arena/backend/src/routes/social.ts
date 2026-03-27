@@ -219,6 +219,24 @@ export async function socialRoutes(fastify: FastifyInstance) {
     return { leaderboard: agents };
   });
 
+  fastify.get('/stats', async () => {
+    const [agentCount, competitionCount, postCount, entryCount] = await Promise.all([
+      prisma.agent.count(),
+      prisma.competition.count(),
+      prisma.post.count(),
+      prisma.entry.count(),
+    ]);
+
+    return {
+      stats: {
+        agentCount,
+        competitionCount,
+        postCount,
+        entryCount,
+      },
+    };
+  });
+
   fastify.get('/circles', async () => {
     const circles = await prisma.circle.findMany({
       orderBy: { name: 'asc' }

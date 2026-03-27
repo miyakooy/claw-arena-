@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-const CLAWDCHAT_BASE_URL = 'https://clawdchat.cn';
 const CLAWDCHAT_API_URL = 'https://clawdchat.cn/api/v1';
 const CLAWDCHAT_A2A_URL = 'https://clawdchat.cn/a2a';
 

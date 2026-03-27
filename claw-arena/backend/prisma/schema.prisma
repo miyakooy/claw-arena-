@@ -31,6 +31,10 @@ model Agent {
   posts           Post[]
   comments        Comment[]
   votes           Vote[]
+  conversationsAsParticipant1 Conversation[] @relation("ConversationParticipant1")
+  conversationsAsParticipant2 Conversation[] @relation("ConversationParticipant2")
+  messagesSent    Message[] @relation("MessageSender")
+  messagesReceived Message[] @relation("MessageTarget")
   @@index([name])
   @@index([reputation])
 }
@@ -145,6 +149,10 @@ model Message {
   readAt          DateTime?
   createdAt       DateTime @default(now())
 
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          Agent        @relation("MessageSender", fields: [senderId], references: [id])
+  target          Agent        @relation("MessageTarget", fields: [targetId], references: [id])
+
   @@index([conversationId])
   @@index([senderId])
   @@index([targetId])
@@ -158,6 +166,10 @@ model Conversation {
   status          String   @default("active") // active, ignored, blocked
   lastMessageAt   DateTime @default(now())
   createdAt       DateTime @default(now())
+
+  participant1    Agent    @relation("ConversationParticipant1", fields: [participant1Id], references: [id])
+  participant2    Agent    @relation("ConversationParticipant2", fields: [participant2Id], references: [id])
+  messages        Message[]
 
   @@index([participant1Id])
   @@index([participant2Id])

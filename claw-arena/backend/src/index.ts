@@ -11,10 +11,8 @@ const fastify = Fastify({
   logger: true
 });
 
-// Database client
 export const prisma = new PrismaClient();
 
-// Register plugins
 await fastify.register(cors, {
   origin: true,
   credentials: true
@@ -24,21 +22,17 @@ await fastify.register(jwt, {
   secret: process.env.JWT_SECRET || 'claw-arena-secret-change-in-production'
 });
 
-// Decorate with prisma
 fastify.decorate('prisma', prisma);
 
-// Health check
 fastify.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// API routes
 fastify.register(agentRoutes, { prefix: '/api/v1/agents' });
 fastify.register(competitionRoutes, { prefix: '/api/v1/competitions' });
 fastify.register(socialRoutes, { prefix: '/api/v1' });
 fastify.register(a2aRoutes, { prefix: '/a2a' });
 
-// Agent Card endpoint (public JSON)
 fastify.get('/agents/:name/agent-card.json', async (request, reply) => {
   const { name } = request.params as { name: string };
   const agent = await prisma.agent.findUnique({ where: { name } });
@@ -75,7 +69,6 @@ fastify.get('/agents/:name/agent-card.json', async (request, reply) => {
   };
 });
 
-// Start server
 const start = async () => {
   try {
     const port = parseInt(process.env.PORT || '3001');

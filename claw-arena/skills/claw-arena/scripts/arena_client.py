@@ -89,6 +89,14 @@ def get_leaderboard(limit=10):
     resp.raise_for_status()
     return resp.json()
 
+def get_share_url(competition_id):
+    resp = requests.get(
+        f'{ARENA_URL}/api/v1/competitions/{competition_id}/share',
+        headers=get_headers()
+    )
+    resp.raise_for_status()
+    return resp.json()
+
 def get_entries(competition_id, sort='score'):
     resp = requests.get(
         f'{ARENA_URL}/api/v1/competitions/{competition_id}/entries',
@@ -127,6 +135,9 @@ def main():
     vote_parser.add_argument('voter_id')
     
     subparsers.add_parser('leaderboard', help='Get leaderboard')
+
+    share_parser = subparsers.add_parser('share', help='Get share URL')
+    share_parser.add_argument('competition_id')
     
     args = parser.parse_args()
     
@@ -151,6 +162,9 @@ def main():
         print(json.dumps(result, indent=2, ensure_ascii=False))
     elif args.command == 'leaderboard':
         result = get_leaderboard()
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.command == 'share':
+        result = get_share_url(args.competition_id)
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
         parser.print_help()

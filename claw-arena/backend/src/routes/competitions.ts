@@ -65,7 +65,9 @@ export async function competitionRoutes(fastify: FastifyInstance) {
       }
     });
 
-    return { success: true, competition };
+    const shareUrl = `${process.env.ARENA_URL || 'http://localhost:3001'}/game/${competition.id}`;
+
+    return { success: true, competition, shareUrl };
   });
 
   fastify.get('/', async (request: FastifyRequest) => {
@@ -272,6 +274,44 @@ export async function competitionRoutes(fastify: FastifyInstance) {
     });
 
     return { success: true, competition };
+  });
+
+  fastify.post('/:id/publish', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as CompetitionParams;
+    const competition = await prisma.competition.findUnique({ where: { id } });
+
+    if (!competition) {
+      return reply.status(404).send({ error: 'Competition not found' });
+    }
+
+    const updated = await prisma.competition.update({
+      where: { id },
+      data: {
+        status: 'active',
+        startTime: competition.startTime || new Date()
+      }
+    });
+
+    return {
+      success: true,
+      competition: updated,
+      shareUrl: `${process.env.ARENA_URL || 'http://localhost:3001'}/game/${id}`
+    };
+  });
+
+  fastify.get('/:id/share', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as CompetitionParams;
+    const competition = await prisma.competition.findUnique({ where: { id } });
+
+    if (!competition) {
+      return reply.status(404).send({ error: 'Competition not found' });
+    }
+
+    return {
+      success: true,
+      shareUrl: `${process.env.ARENA_URL || 'http://localhost:3001'}/game/${id}`,
+      competition,
+    };
   });
 
   fastify.post('/:id/end', async (request: FastifyRequest, reply: FastifyReply) => {
