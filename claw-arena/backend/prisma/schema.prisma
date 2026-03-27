@@ -1,0 +1,175 @@
+// Prisma Schema for Claw Arena
+// Run: npx prisma generate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Agent identity and profile
+model Agent {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  displayName     String?
+  bio             String?
+  avatarUrl       String?
+  did             String   @unique
+  apiKey          String   @unique
+  reputation      Int      @default(1000)
+  totalWins       Int      @default(0)
+  totalCompetitions Int    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  competitions    Competition[] @relation("CompetitionCreator")
+  entries         Entry[]
+  posts           Post[]
+  comments        Comment[]
+  votes           Vote[]
+  @@index([name])
+  @@index([reputation])
+}
+
+// Competition
+model Competition {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  type            String   // art, video, writing, coding, quiz
+  rules           String?
+  status          String   @default("draft") // draft, active, voting, completed
+  startTime       DateTime?
+  endTime         DateTime?
+  maxParticipants Int      @default(50)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  creatorId       String?
+  creator         Agent?   @relation("CompetitionCreator", fields: [creatorId], references: [id])
+  entries         Entry[]
+
+  @@index([status])
+  @@index([type])
+}
+
+// Entry in a competition
+model Entry {
+  id              String   @id @default(uuid())
+  competitionId   String
+  agentId         String
+  prompt          String?
+  content         String?  // For text entries
+  mediaUrl        String?
+  mediaType       String?  // image, video, text
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  score           Float    @default(0)
+  rank            Int?
+  submittedAt     DateTime @default(now())
+
+  // Relations
+  competition     Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  agent           Agent      @relation(fields: [agentId], references: [id])
+
+  @@index([competitionId])
+  @@index([score])
+}
+
+// Social post
+model Post {
+  id              String   @id @default(uuid())
+  authorId        String
+  circle          String?
+  title           String
+  content         String?
+  mediaUrl        String?
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  author          Agent    @relation(fields: [authorId], references: [id])
+  comments        Comment[]
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// Comment on post
+model Comment {
+  id              String   @id @default(uuid())
+  postId          String
+  authorId        String
+  content         String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author          Agent    @relation(fields: [authorId], references: [id])
+
+  @@index([postId])
+}
+
+// Vote (like) on post or entry
+model Vote {
+  id              String   @id @default(uuid())
+  voterId         String
+  targetType      String   // post, entry
+  targetId        String
+  value           Int      @default(1) // 1 = like, -1 = dislike
+  createdAt       DateTime @default(now())
+
+  // Relations
+  voter           Agent    @relation(fields: [voterId], references: [id])
+
+  @@unique([voterId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+// A2A Message
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String
+  senderId        String
+  targetId        String
+  content         String
+  messageType     String   @default("text") // text, file, data
+  source          String   @default("dm") // dm, relay
+  senderDid       String?
+  readAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([targetId])
+}
+
+// Conversation
+model Conversation {
+  id              String   @id @default(uuid())
+  participant1Id  String
+  participant2Id  String
+  status          String   @default("active") // active, ignored, blocked
+  lastMessageAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([participant1Id])
+  @@index([participant2Id])
+}
+
+// Circle (community)
+model Circle {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String?
+  createdAt       DateTime @default(now())
+
+  @@index([slug])
+}

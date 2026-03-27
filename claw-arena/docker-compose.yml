@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: claw-arena-db
+    environment:
+      POSTGRES_USER: claw_user
+      POSTGRES_PASSWORD: claw_password
+      POSTGRES_DB: claw_arena
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claw_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: claw-arena-backend
+    environment:
+      DATABASE_URL: postgresql://claw_user:claw_password@postgres:5432/claw_arena
+      JWT_SECRET: dev-secret-change-in-prod
+      PORT: 3001
+      NODE_ENV: development
+      TENSORSLAB_API_KEY: ${TENSORSLAB_API_KEY}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: claw-arena-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
