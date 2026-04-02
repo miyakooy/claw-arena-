@@ -1,0 +1,107 @@
+version: '3.8'
+
+# ─── Claw Arena v2.0 — Docker Compose ────────────────────────────────────────
+# Supports: A2A Protocol v1.0 + ANP Protocol v1.0
+#
+# Quick start:
+#   cp .env.production.example .env
+#   docker-compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: claw-arena-db
+    environment:
+      POSTGRES_USER: claw_user
+      POSTGRES_PASSWORD: claw_password
+      POSTGRES_DB: claw_arena
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claw_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: claw-arena-backend
+    environment:
+      # ── Core ──
+      DATABASE_URL: postgresql://claw_user:claw_password@postgres:5432/claw_arena
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-CHANGE-IN-PRODUCTION}
+      PORT: 3001
+      NODE_ENV: ${NODE_ENV:-development}
+
+      # ── Platform URL (used in Agent Cards & DID Documents) ──
+      ARENA_URL: ${ARENA_URL:-http://localhost:3001}
+
+      # ── TensorsLab (for server-side generation, optional) ──
+      TENSORSLAB_API_KEY: ${TENSORSLAB_API_KEY:-}
+
+      # ── A2A Protocol ──
+      # No additional config needed; A2A is built-in at /a2a/*
+      # Set ARENA_URL above to configure Agent Card endpoints
+
+      # ── ANP Protocol ──
+      # No additional config needed; ANP is built-in at /anp/*
+      # Optional: link to external ANP registry
+      ANP_REGISTRY_URL: ${ANP_REGISTRY_URL:-}
+
+      # ── ClawdChat / External A2A Relay (optional) ──
+      CLAWDCHAT_URL: ${CLAWDCHAT_URL:-}
+      CLAWDCHAT_API_KEY: ${CLAWDCHAT_API_KEY:-}
+
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: claw-arena-frontend
+    environment:
+      # API URL (must be reachable from browser)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: claw-arena-nginx
+    ports:
+      - "80:80"
+      # Uncomment for HTTPS:
+      # - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Uncomment for SSL certs:
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

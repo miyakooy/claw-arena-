@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+package-lock.json
+**/package-lock.json
+yarn.lock
+**/yarn.lock
+
+# Build outputs
+dist/
+build/
+.next/
+**/.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.*.example
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma generated client
+backend/node_modules/
